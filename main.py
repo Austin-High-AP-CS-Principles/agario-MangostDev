@@ -16,8 +16,8 @@ class Enemy(pygame.sprite.Sprite):
     # Constructor
     def __init__(self):
         super(Enemy, self).__init__() #calling on the constructor for the sprite class
-        self.radius = 20
-        self.color = "Red"
+        self.radius = random.randint(10,20)
+        self.color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
         self.index = 0
         self.speed = 3
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA, 32)
@@ -44,13 +44,23 @@ class Enemy(pygame.sprite.Sprite):
         self.image = self.image.convert_alpha()
         pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius)
         self.speed *= .9
+        self.deltax = self.speed * math.cos(self.direction)
+        self.deltay = self.speed * math.sin(self.direction)
 
+    def collision(self):
+        for obj in objects:
+            if obj != self:
+                if pygame.sprite.collide_rect(self, obj): 
+                    print(obj)
+                    if self.radius > obj.radius:
+                        self.grow(obj.radius)
+                        obj.kill()
 
 class Player(Enemy):
     # Constructor
     def __init__(self):
         super(Player, self).__init__() #calling on the constructor for the sprite class
-        self.radius = 10
+        self.radius = 15
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA, 32)
         self.image = self.image.convert_alpha()
         self.color = "Blue"
@@ -63,7 +73,6 @@ class Player(Enemy):
         disty = self.rect.centery - my
         disty *= -1
         angle = math.atan2(disty,distx)
-        print(angle)
         self.deltax = self.speed * math.cos(angle)
         self.deltay = self.speed * math.sin(angle)
         self.rect.centerx += self.deltax
@@ -78,6 +87,11 @@ pygame.display.set_caption("Agar.io")
 
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
+
+# Create Text
+font = pygame.font.Font(None,100)
+text_surface = font.render("Game Over", False,"Red")
+text_surface_two = font.render("You Win!", False, "Green")
 
 enemies = pygame.sprite.Group()
 for num in range(10):
@@ -106,26 +120,44 @@ while running:
     for event in pygame.event.get(): # pygame.event.get()
         if event.type == pygame.QUIT:
             running = False
-
     # Fill the screen with a color (e.g., white)
     screen.fill(WHITE)
 
+    # Create more food on a timer
+    if count % 25 == 0:
+        if len(meals.sprites()) < 15:
+            meals.add(Food("Green"))
+            objects.add(meals)
+
     #Paste all of the food objects onto the screen.
+
     objects.draw(screen)
 
     player.move()
 
     for enemy in enemies:
         enemy.move(count)
+        enemy.collision()
+        player.collision()
 
-    for obj in objects:
-        for other in objects:
-            if obj != other and type(obj) != Food:
-                collide = pygame.sprite.collide_rect(obj, other)
-                if collide:
-                    if obj.radius > other.radius:
-                        obj.grow(other.radius)
-                        other.kill()
+    #for obj in objects:
+    #    for other in objects:
+    #        if obj != other and type(obj) != Food:
+    #            collide = pygame.sprite.collide_rect(obj, other)
+    #            if collide:
+    #                if obj.radius > other.radius:
+    #                    obj.grow(other.radius)
+    #                    other.kill()
+
+    # Check if the player is still alive
+    if pygame.sprite.Sprite.alive(player) == False:
+        screen.blit(text_surface,(200,250))
+
+    # Check if there are any enemies
+    if len(enemies.sprites()) == 0:
+        screen.blit(text_surface_two,(200,250))
+        
+        
 
     # Update the display
     pygame.display.flip()
